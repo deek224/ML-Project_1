@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Placement Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --ink: #14213d;
+  --muted: #5b6785;
+  --line: #d5dbe8;
+  --accent: #2f4bff;
+  --good: #0f9d6b;
+  --bad: #d6453d;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+.top, .layout { max-width: 1040px; margin: 0 auto; }
+
+.top { margin-bottom: 2rem; }
+
+h1, h2 {
+  font-family: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; }
+.top p { color: var(--muted); margin: .6rem 0 0; max-width: 46ch; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+form {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; }
+
+legend {
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 0;
+  margin-bottom: .75rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+input, select {
+  font: inherit;
+  color: var(--ink);
+  background: #f8f9fc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .6rem .7rem;
+  width: 100%;
+}
+
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input.invalid { border-color: var(--bad); background: #fff5f4; }
+
+.actions { display: flex; gap: .75rem; }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: .75rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+button:hover { filter: brightness(1.08); }
+button:disabled { opacity: .6; cursor: progress; }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+
+/* Result panel */
+.result {
+  position: sticky;
+  top: 1.5rem;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: background .4s;
+}
+
+.result.placed { background: #0b5d44; }
+.result.not-placed { background: #7a2723; }
+
+.gauge { position: relative; width: 100%; max-width: 300px; margin: 0 auto .5rem; }
+.gauge svg { width: 100%; display: block; }
+
+.gauge path {
+  fill: none;
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.gauge .track { stroke: rgba(255,255,255,.18); }
+
+.gauge .fill {
+  stroke: #fff;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1);
+}
+
+.gauge-text {
+  position: absolute;
+  inset: auto 0 6px 0;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.result h2 { font-size: 1.6rem; margin-top: .5rem; }
+.result p { margin: .5rem auto 0; opacity: .85; max-width: 30ch; }
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .result { position: static; order: -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gauge .fill, .result { transition: none; }
+}
+</style>
+</head>
+<body>
+  <header class="top">
+    <h1>Placement Predictor</h1>
+    <p>Enter a student's details to see how likely they are to be placed.</p>
+  </header>
+
+  <main class="layout">
+    <form id="form" novalidate>
+      <fieldset>
+        <legend>Student</legend>
+        <div class="grid">
+          <label>Gender
+            <select name="gender" required>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+          <label>Branch
+            <select name="branch" required>
+              <option>CSE</option><option>IT</option><option>ECE</option>
+              <option>Mechanical</option><option>Civil</option><option>Commerce</option>
+            </select>
+          </label>
+          <label>Extracurricular activities
+            <select name="extracurricular" required>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Daily habits</legend>
+        <div class="grid">
+          <label>Study hours per day
+            <input type="number" name="study_hours" min="0" max="12" step="0.1" value="3.5" required>
+          </label>
+          <label>Sleep hours per day
+            <input type="number" name="sleep_hours" min="3" max="12" step="0.1" value="7" required>
+          </label>
+          <label>Internet use, hours per day
+            <input type="number" name="internet_usage" min="0" max="12" step="0.1" value="4.5" required>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Academic record</legend>
+        <div class="grid">
+          <label>Attendance (%)
+            <input type="number" name="attendance" min="0" max="100" step="0.1" value="75" required>
+          </label>
+          <label>Assignments completed
+            <input type="number" name="assignments_completed" min="0" max="50" step="1" value="13" required>
+          </label>
+          <label>Previous exam score
+            <input type="number" name="previous_score" min="0" max="100" step="0.1" value="62" required>
+          </label>
+          <label>Latest exam score
+            <input type="number" name="exam_score" min="0" max="100" step="0.1" value="60" required>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" id="submit">Predict placement</button>
+        <button type="button" id="reset" class="ghost">Reset</button>
+      </div>
+    </form>
+
+    <aside class="result" id="result" aria-live="polite">
+      <div class="gauge">
+        <svg viewBox="0 0 200 120" aria-hidden="true">
+          <path class="track" d="M 20 100 A 80 80 0 0 1 180 100" pathLength="100"/>
+          <path class="fill" id="arc" d="M 20 100 A 80 80 0 0 1 180 100" pathLength="100"/>
+        </svg>
+        <div class="gauge-text">
+          <span id="pct">–</span>
+        </div>
+      </div>
+      <h2 id="verdict">No prediction yet</h2>
+      <p id="note">Fill in the form and choose Predict placement.</p>
+    </aside>
+  </main>
+
+  <script>
+const form = document.getElementById("form");
+const submitBtn = document.getElementById("submit");
+const resetBtn = document.getElementById("reset");
+const result = document.getElementById("result");
+const arc = document.getElementById("arc");
+const pct = document.getElementById("pct");
+const verdict = document.getElementById("verdict");
+const note = document.getElementById("note");
+
+const NUMBER_FIELDS = [
+  "study_hours", "attendance", "sleep_hours", "internet_usage",
+  "assignments_completed", "previous_score", "exam_score",
+];
+
+function showState(state, title, text, percent) {
+  result.classList.remove("placed", "not-placed");
+  if (state) result.classList.add(state);
+  verdict.textContent = title;
+  note.textContent = text;
+  pct.textContent = percent === null ? "–" : `${Math.round(percent * 100)}%`;
+  arc.style.strokeDashoffset = percent === null ? 100 : 100 - percent * 100;
+}
+
+function validate() {
+  let ok = true;
+  for (const name of NUMBER_FIELDS) {
+    const el = form.elements[name];
+    const v = parseFloat(el.value);
+    const bad = Number.isNaN(v) || v < +el.min || v > +el.max;
+    el.classList.toggle("invalid", bad);
+    if (bad) ok = false;
+  }
+  return ok;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  if (!validate()) {
+    showState(null, "Check the highlighted fields",
+      "Each value must be inside the range allowed for that field.", null);
+    return;
+  }
+
+  const payload = {
+    gender: form.elements.gender.value,
+    branch: form.elements.branch.value,
+    extracurricular: form.elements.extracurricular.value,
+  };
+  for (const name of NUMBER_FIELDS) payload[name] = parseFloat(form.elements[name].value);
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Predicting…";
+
+  try {
+    const res = await fetch("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+
+    const placed = data.prediction === "Placed";
+    const p = data.placed_probability;
+    showState(
+      placed ? "placed" : "not-placed",
+      data.prediction,
+      placed
+        ? "The model expects this student to be placed."
+        : "This student may need extra help, such as mock interviews or mentoring.",
+      p
+    );
+  } catch (err) {
+    showState(null, "Prediction failed",
+      "Check that the API is running, then try again.", null);
+    console.error(err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Predict placement";
+  }
+});
+
+resetBtn.addEventListener("click", () => {
+  form.reset();
+  form.querySelectorAll(".invalid").forEach((el) => el.classList.remove("invalid"));
+  showState(null, "No prediction yet", "Fill in the form and choose Predict placement.", null);
+});
+</script>
+</body>
+</html>
