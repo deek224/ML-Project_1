@@ -1,5 +1,5 @@
 
-Requirements · TXT
+Requirements ·txt
 fastapi
 uvicorn[standard]
 pandas
